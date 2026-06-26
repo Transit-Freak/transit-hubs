@@ -1,0 +1,54 @@
+# Weekly refresh of the precomputed transit data.
+#
+# Downloads the national GTFS feed, runs process.js to reduce it to report.json,
+# and commits the result back to the repo. Committing to the default branch makes
+# GitHub Pages redeploy automatically, so the next visitor gets fresh data — no
+# server, no manual step. The heavy parsing happens here, never in the browser.
+name: refresh-data
+
+on:
+  schedule:
+    - cron: "0 3 * * 1"        # every Monday 03:00 UTC
+  workflow_dispatch: {}         # + manual "Run workflow" button
+
+permissions:
+  contents: write
+
+# Never let two refreshes run at once (a manual run during the scheduled one).
+concurrency:
+  group: refresh-data
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install deps
+        run: npm install fflate --no-save
+
+      - name: Download GTFS and build report.json
+        run: |
+          curl -sSL --fail --retry 3 --retry-delay 10 \
+            -o gtfs.zip "https://gtfs.mot.gov.il/gtfsfiles/israel-public-transportation.zip"
+          ls -lh gtfs.zip
+          node --max-old-space-size=6144 process.js gtfs.zip report
+          rm -f gtfs.zip          # don't commit the multi-hundred-MB feed
+          ls -lh report.json
+
+      - name: Commit if data changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add report.json
+          if git diff --staged --quiet; then
+            echo "No data changes — nothing to commit."
+          else
+            git commit -m "Refresh transit data $(date -u +%F)"
+            git push
+          fi
