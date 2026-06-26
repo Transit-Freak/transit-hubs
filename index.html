@@ -41,6 +41,12 @@ document.addEventListener('DOMContentLoaded', async function() {
 
   // Error sink persists across replaceWith since it's on window, not the DOM.
   window.addEventListener('error', function(e) {
+    // Capture phase also catches sub-resource load failures (map tiles,
+    // images, fonts, CDN scripts), which surface as an element target with
+    // no message. A map view fetches dozens of tiles; any that fail to load
+    // would otherwise spam the overlay with uninformative "[bundle] error"
+    // lines and cover the UI. Only report genuine uncaught script errors.
+    if (e.target && e.target !== window && e.target.nodeName) return;
     var p = document.body || document.documentElement;
     var d = document.getElementById('__bundler_err') || p.appendChild(document.createElement('div'));
     d.id = '__bundler_err';
