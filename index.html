@@ -2,6 +2,12 @@
 <html>
 <head>
   <meta charset="utf-8">
+  <!-- Ask the browser to revalidate the page on every load instead of
+       serving a cached copy. Without this, an updated build keeps showing the
+       old version until the cache is cleared (e.g. a different browser/user). -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>Bundled Page</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
